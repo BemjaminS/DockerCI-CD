@@ -5,6 +5,8 @@
 trigger:
 - main
 - feature/*
+pool:
+  name: Default
 
 resources:
 - repo: self
@@ -27,8 +29,6 @@ stages:
   jobs:
   - job: Build
     displayName: Build
-    pool:
-      vmImage: $(vmImageName)
     steps:
     - task: Docker@2
       displayName: Build and push an image to container registry
