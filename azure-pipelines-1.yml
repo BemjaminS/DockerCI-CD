@@ -19,6 +19,8 @@ variables:
   # Agent VM image name
   vmImageName: 'ubuntu-latest'
 
+#====================== build and Push to container registry ====================
+
 stages:
 - stage: Build
   displayName: Build and push stage
@@ -37,3 +39,52 @@ stages:
         containerRegistry: $(dockerRegistryServiceConnection)
         tags: |
           $(tag)
+
+#====================== Continues deployment to Staging ====================
+
+# Continuous Deployment Process for Staging Environment
+- stage: DeployToStaging
+  condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/main'))
+  variables: 
+  - group: Stage-var
+  jobs:
+  - deployment: staging
+    displayName: Deploy to Staging
+    environment:
+      name: Staging
+      resourceType: VirtualMachine
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: CmdLine@2
+            inputs:
+              script: |
+                sudo apt update
+                sudo apt upgrade -y
+                sudo apt install azure-cli -y
+                sudo apt install docker.io
+                sudo chmod 666 /var/run/docker.sock
+          
+          - task: Docker@2
+            inputs:
+              containerRegistry: 'dockerregapp.azurecr.io'
+              command: 'login'
+          
+          - task: CmdLine@2
+            displayName: Delete old container Process if exist & delete unused images
+            inputs:
+              script: |
+                docker system prine -a -f
+                containers=$(docker ps -q)
+                if [ ! -z $containers ]; then
+                  docker kill $containers;
+                fi
+          
+          - task: CmdLine@2
+            inputs:
+              script: 'docker pull dockerregapp.azurecr.io/dockercicd:$(tag)'
+
+          - task: CmdLine@2
+            inputs:
+              script: 'docker run -d -p 8080:8080 -e PGHOST=$(PGHOST) -e PGUSERNAME=$(PGUSERNAME) -e PGDATABASE=postgres -e PGPASSWORD=$(PGPASSWORD) -e PGPORT=5432 -e PORT=8080 -e HOST=0.0.0.0 -e HOST_URL=$(HOST_URL) -e COOKIE_ENCRYPT_PWD=$(COOKIE_ENCRYPT_PWD) -e NODE_ENV=development -e OKTA_ORG_URL=$(OKTA_ORG_URL) -e OKTA_CLIENT_ID=$(OKTA_CLIENT_ID) -e OKTA_CLIENT_SECRET=$(OKTA_CLIENT_SECRET) $(containerRegistry)/$(imageRepository):$(tag)'
