@@ -6,7 +6,7 @@ trigger:
 - main
 - feature/*
 pool:
-  name: Default
+  name: Azure Pipelines
 
 resources:
 - repo: self
