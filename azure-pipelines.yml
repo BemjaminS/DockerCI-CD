@@ -67,11 +67,11 @@ stages:
               containerRegistry: $(dockerRegistryServiceConnection)
               command: 'login'
           
-          - task: CmdLine@2
-            displayName: Delete old running container & unnecessry images
-            inputs:
-              script: |
-                sudo stop $(sudo docker ps -qa)
+          #- task: CmdLine@2
+          #  displayName: Delete old running container & unnecessry images
+          #  inputs:
+          #    script: |
+          #      sudo stop $(sudo docker ps -qa)
           - task: CmdLine@2
             inputs:
               script: 'sudo docker run -d -p 8080:8080 $(containerRegistry)/$(imageRepository):$(tag)'
