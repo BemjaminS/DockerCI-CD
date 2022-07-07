@@ -46,7 +46,7 @@ stages:
 - stage: DeployToStaging
   condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/main'))
   variables: 
-  - group: Stage-var
+  - group: Staging-var
   jobs:
   - deployment: staging
     displayName: Deploy to Staging
