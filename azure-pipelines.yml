@@ -5,31 +5,33 @@
 trigger:
 - main
 - feature/*
-pool:
-  name: Azure Pipelines
 
 resources:
 - repo: self
 
 variables:
   # Container registry service connection established during pipeline creation
-  dockerRegistryServiceConnection: '1c22e920-a916-4235-a693-c2590ad8536b'
-  imageRepository: 'dockercicd'
-  containerRegistry: 'benappfiles.azurecr.io'
+  dockerRegistryServiceConnection: '89ecb736-99e6-4332-b60a-1197a5b4d41c'
+  imageRepository: 'benapp'
+  containerRegistry: 'dockerregapp.azurecr.io'
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
   tag: '$(Build.BuildId)'
 
   # Agent VM image name
   vmImageName: 'ubuntu-latest'
-  
-#======================= CI - Docker build for app ====================
+
+#====================== build and Push to container registry ====================
 stages:
 - stage: Build
   displayName: Build and push stage
   jobs:
   - job: Build
     displayName: Build
+    pool:
+      vmImage: $(vmImageName)
     steps:
+    
+    - task: printAllVariables@1
     - task: Docker@2
       displayName: Build and push an image to container registry
       inputs:
@@ -40,12 +42,16 @@ stages:
         tags: |
           $(tag)
 
-#=================== Ddeploy app to staging environment ==================
+#====================== Continues deployment to Staging ====================
+
+# Continuous Deployment Process for Staging Environment
 - stage: DeployToStaging
   condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/main'))
+  variables: 
+  - group: Stage-var
   jobs:
   - deployment: staging
-    displayName: Deploy container to Staging environment
+    displayName: Deploy to Staging
     environment:
       name: Staging
       resourceType: VirtualMachine
@@ -53,25 +59,35 @@ stages:
       runOnce:
         deploy:
           steps:
-          
-
           - task: CmdLine@2
-            displayName: Update vm and install docker engine
             inputs:
               script: |
-                sudo apt-get update
-                sudo apt install docker.io -y
+                sudo apt update
+                sudo apt upgrade -y
+                sudo apt install azure-cli -y
+                sudo apt install docker.io
+                sudo chmod 666 /var/run/docker.sock
+          
           - task: Docker@2
-            displayName: 'Login to Registry'
             inputs:
-              containerRegistry: $(dockerRegistryServiceConnection)
+              containerRegistry: 'dockerregapp.azurecr.io'
               command: 'login'
           
-          #- task: CmdLine@2
-          #  displayName: Delete old running container & unnecessry images
-          #  inputs:
-          #    script: |
-          #      sudo stop $(sudo docker ps -qa)
           - task: CmdLine@2
             inputs:
-              script: 'sudo docker run -d -p 8080:8080 benappfiles.azurecr.io/$(imageRepository):$(tag)'
+              script: |
+                docker system prune -a -f
+                containers=$(docker ps -q)
+                if [ ! -z $containers ]; then
+                  docker kill $containers;
+                fi
+          
+          - task: CmdLine@2
+            inputs:
+              script: 'docker pull dockerregapp.azurecr.io/benapp:$(tag)'
+
+          - task: CmdLine@2
+            inputs:
+              script: 'docker run -d -p 8080:8080 -e PGHOST=$(PGHOST) -e PGUSERNAME=$(PGUSERNAME) -e PGDATABASE=postgres -e PGPASSWORD=$(PGPASSWORD) -e PGPORT=5432 -e PORT=8080 -e HOST=0.0.0.0 -e HOST_URL=$(HOST_URL) -e COOKIE_ENCRYPT_PWD=$(COOKIE_ENCRYPT_PWD) -e NODE_ENV=development -e OKTA_ORG_URL=$(OKTA_ORG_URL) -e OKTA_CLIENT_ID=$(OKTA_CLIENT_ID) -e OKTA_CLIENT_SECRET=$(OKTA_CLIENT_SECRET) $(containerRegistry)/$(imageRepository):$(tag)'
+          
+#====================== Continues Delivery to PROD ====================
