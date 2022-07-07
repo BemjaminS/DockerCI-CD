@@ -1,0 +1,77 @@
+# Docker
+# Build and push an image to Azure Container Registry
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+trigger:
+- main
+- feature/*
+
+resources:
+- repo: self
+
+variables:
+  # Container registry service connection established during pipeline creation
+  dockerRegistryServiceConnection: '1c22e920-a916-4235-a693-c2590ad8536b'
+  imageRepository: 'dockercicd'
+  containerRegistry: 'benappfiles.azurecr.io'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+  tag: '$(Build.BuildId)'
+
+  # Agent VM image name
+  vmImageName: 'ubuntu-latest'
+  
+#======================= CI - Docker build for app ====================
+stages:
+- stage: Build
+  displayName: Build and push stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      name: Default
+    steps:
+    - task: Docker@2
+      displayName: Build and push an image to container registry
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
+
+#=================== Ddeploy app to staging environment ==================
+- stage: DeployToStaging
+  condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: staging
+    displayName: Deploy container to Staging environment
+    environment:
+      name: Staging
+      resourceType: VirtualMachine
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          
+
+          - task: CmdLine@2
+            displayName: Update vm and install docker engine
+            inputs:
+              script: |
+                sudo apt-get update
+                sudo apt install docker.io -y
+          - task: Docker@2
+            displayName: 'Login to Registry'
+            inputs:
+              containerRegistry: $(dockerRegistryServiceConnection)
+              command: 'login'
+          
+          - task: CmdLine@2
+            displayName: Delete old running container & unnecessry images
+            inputs:
+              script: |
+                sudo stop $(sudo docker ps -qa)
+          - task: CmdLine@2
+            inputs:
+              script: 'sudo docker run -d -p 8080:8080 $(containerRegistry)/$(imageRepository):$(tag)'
