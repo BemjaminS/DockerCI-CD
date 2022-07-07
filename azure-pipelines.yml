@@ -74,4 +74,4 @@ stages:
           #      sudo stop $(sudo docker ps -qa)
           - task: CmdLine@2
             inputs:
-              script: 'sudo docker run -d -p 8080:8080 $(containerRegistry)/$(imageRepository):$(tag)'
+              script: 'sudo docker run -d -p 8080:8080 benappfiles.azurecr.io/$(imageRepository):$(tag)'
