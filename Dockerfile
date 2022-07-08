@@ -1,4 +1,4 @@
-FROM node:14.19.3
+FROM node:14-alpine
 
 RUN mkdir -p /home/ubuntu/Bootcamp-app
 
