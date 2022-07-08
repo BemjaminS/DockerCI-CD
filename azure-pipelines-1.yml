@@ -75,7 +75,7 @@ stages:
             displayName: Delete old container Process if exist & delete unused images
             inputs:
               script: |
-                docker system prine -a -f
+                docker system prune -a -f
                 containers=$(docker ps -q)
                 if [ ! -z $containers ]; then
                   docker kill $containers;
