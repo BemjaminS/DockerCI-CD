@@ -63,7 +63,7 @@ stages:
                 sudo apt update
                 sudo apt upgrade -y
                 sudo apt install azure-cli -y
-                sudo apt install docker.io
+                sudo apt install docker.io -y
                 sudo chmod 666 /var/run/docker.sock
           
           - task: Docker@2
