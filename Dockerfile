@@ -16,4 +16,4 @@ EXPOSE 8080
 
 ENTRYPOINT npm run initdb
 
-CMD [ "npm" , "run" , "dev" ]
+ENTRYPOINT npm run dev
