@@ -14,5 +14,6 @@ COPY . .
 
 EXPOSE 8080
 
-CMD [ "npm"  , "run" , "initdb" ]
+ENTRYPOINT npm run initdb
+
 CMD [ "npm" , "run" , "dev" ]
