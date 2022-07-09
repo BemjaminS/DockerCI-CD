@@ -51,7 +51,7 @@ stages:
   - deployment: staging
     displayName: Deploy to Staging
     environment:
-      name: Staging
+      name: STAGING
       resourceType: VirtualMachine
     strategy:
       runOnce:
@@ -90,7 +90,7 @@ stages:
               script: 'docker run -d -p 8080:8080 -e PGHOST=$(PGHOST) -e PGUSERNAME=$(PGUSERNAME) -e PGDATABASE=postgres -e PGPASSWORD=$(PGPASSWORD) -e PGPORT=5432 -e PORT=8080 -e HOST=0.0.0.0 -e HOST_URL=$(HOST_URL) -e COOKIE_ENCRYPT_PWD=$(COOKIE_ENCRYPT_PWD) -e NODE_ENV=development -e OKTA_ORG_URL=$(OKTA_ORG_URL) -e OKTA_CLIENT_ID=$(OKTA_CLIENT_ID) -e OKTA_CLIENT_SECRET=$(OKTA_CLIENT_SECRET) $(containerRegistry)/$(imageRepository):$(tag)'
           
 # Continuous Deployment Process for Staging Environment
-- stage: Delivery to PRODUCTION
+- stage: DeliverytoPRODUCTION
   condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/main'))
   variables: 
   - group: PROD-var
@@ -98,7 +98,7 @@ stages:
   - deployment: staging
     displayName: Deploy to Staging
     environment:
-      name: Staging
+      name: PRODUCTION
       resourceType: VirtualMachine
     strategy:
       runOnce:
