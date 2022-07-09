@@ -81,7 +81,7 @@ stages:
           
           - task: CmdLine@2
             inputs:
-              script: 'docker pull dockerregapp.azurecr.io/dockercicd:$(tag)'
+              script: 'docker pull dockerregapp.azurecr.io/dockerweighttracker:$(tag)'
 
           - task: CmdLine@2
             inputs:
@@ -128,7 +128,7 @@ stages:
           
           - task: CmdLine@2
             inputs:
-              script: 'docker pull dockerregapp.azurecr.io/dockercicd:$(tag)'
+              script: 'docker pull dockerregapp.azurecr.io/dockerweighttracker:$(tag)'
 
           - task: CmdLine@2
             inputs:
