@@ -1,0 +1,135 @@
+# Docker
+# Build and push an image to Azure Container Registry
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
+
+trigger:
+- main
+
+resources:
+- repo: self
+
+variables:
+  # Container registry service connection established during pipeline creation
+  dockerRegistryServiceConnection: 'cd42fe24-b556-4b23-84fe-3a58b71762c3'
+  imageRepository: 'dockerweighttracker'
+  containerRegistry: 'dockerregapp.azurecr.io'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+  tag: '$(Build.BuildId)'
+
+  # Agent VM image name
+  vmImageName: 'ubuntu-latest'
+
+stages:
+- stage: Build
+  displayName: Build and push stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: Build and push an image to container registry
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
+
+#====================== Continues deployment to Staging ====================
+
+# Continuous Deployment Process for Staging Environment
+- stage: DeployToStaging
+  condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/main'))
+  variables: 
+  - group: Staging-var
+  jobs:
+  - deployment: staging
+    displayName: Deploy to Staging
+    environment:
+      name: STAGING
+      resourceType: VirtualMachine
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: CmdLine@2
+            inputs:
+              script: |
+                sudo apt update
+                sudo apt upgrade -y
+                sudo apt install azure-cli -y
+                sudo apt install docker.io -y
+                sudo chmod 666 /var/run/docker.sock
+          
+          - task: Docker@2
+            inputs:
+              containerRegistry: 'dockerregapp.azurecr.io'
+              command: 'login'
+          
+          - task: CmdLine@2
+            displayName: Delete old container Process if exist & delete unused images
+            inputs:
+              script: |
+                docker system prune -a -f
+                containers=$(docker ps -q)
+                if [ ! -z $containers ]; then
+                  docker kill $containers;
+                fi
+          
+          - task: CmdLine@2
+            inputs:
+              script: 'docker pull dockerregapp.azurecr.io/dockercicd:$(tag)'
+
+          - task: CmdLine@2
+            inputs:
+              script: 'docker run -d -p 8080:8080 -e PGHOST=$(PGHOST) -e PGUSERNAME=$(PGUSERNAME) -e PGDATABASE=postgres -e PGPASSWORD=$(PGPASSWORD) -e PGPORT=5432 -e PORT=8080 -e HOST=0.0.0.0 -e HOST_URL=$(HOST_URL) -e COOKIE_ENCRYPT_PWD=$(COOKIE_ENCRYPT_PWD) -e NODE_ENV=development -e OKTA_ORG_URL=$(OKTA_ORG_URL) -e OKTA_CLIENT_ID=$(OKTA_CLIENT_ID) -e OKTA_CLIENT_SECRET=$(OKTA_CLIENT_SECRET) $(containerRegistry)/$(imageRepository):$(tag)'
+          
+# Continuous Delivery Process for Production Environment
+- stage: DeliverytoPRODUCTION
+  condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/main'))
+  variables: 
+  - group: PROD-var
+  jobs:
+  - deployment: production
+    displayName: Deploy to PRODUCTION
+    environment:
+      name: PRODUCTION
+      resourceType: VirtualMachine
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: CmdLine@2
+            inputs:
+              script: |
+                sudo apt update
+                sudo apt upgrade -y
+                sudo apt install azure-cli -y
+                sudo apt install docker.io -y
+                sudo chmod 666 /var/run/docker.sock
+          
+          - task: Docker@2
+            inputs:
+              containerRegistry: 'dockerregapp.azurecr.io'
+              command: 'login'
+          
+          - task: CmdLine@2
+            displayName: Delete old container Process if exist & delete unused images
+            inputs:
+              script: |
+                docker system prune -a -f
+                containers=$(docker ps -q)
+                if [ ! -z $containers ]; then
+                  docker kill $containers;
+                fi
+          
+          - task: CmdLine@2
+            inputs:
+              script: 'docker pull dockerregapp.azurecr.io/dockercicd:$(tag)'
+
+          - task: CmdLine@2
+            inputs:
+              script: 'docker run -d -p 8080:8080 -e PGHOST=$(PGHOST) -e PGUSERNAME=$(PGUSERNAME) -e PGDATABASE=postgres -e PGPASSWORD=$(PGPASSWORD) -e PGPORT=5432 -e PORT=8080 -e HOST=0.0.0.0 -e HOST_URL=$(HOST_URL) -e COOKIE_ENCRYPT_PWD=$(COOKIE_ENCRYPT_PWD) -e NODE_ENV=development -e OKTA_ORG_URL=$(OKTA_ORG_URL) -e OKTA_CLIENT_ID=$(OKTA_CLIENT_ID) -e OKTA_CLIENT_SECRET=$(OKTA_CLIENT_SECRET) $(containerRegistry)/$(imageRepository):$(tag)'
