@@ -4,6 +4,7 @@
 
 trigger:
 - main
+- feature/*
 
 resources:
 - repo: self
@@ -89,14 +90,14 @@ stages:
             inputs:
               script: 'docker run -d -p 8080:8080 -e PGHOST=$(PGHOST) -e PGUSERNAME=$(PGUSERNAME) -e PGDATABASE=postgres -e PGPASSWORD=$(PGPASSWORD) -e PGPORT=5432 -e PORT=8080 -e HOST=0.0.0.0 -e HOST_URL=$(HOST_URL) -e COOKIE_ENCRYPT_PWD=$(COOKIE_ENCRYPT_PWD) -e NODE_ENV=development -e OKTA_ORG_URL=$(OKTA_ORG_URL) -e OKTA_CLIENT_ID=$(OKTA_CLIENT_ID) -e OKTA_CLIENT_SECRET=$(OKTA_CLIENT_SECRET) $(containerRegistry)/$(imageRepository):$(tag)'
           
-# Continuous Deployment Process for Staging Environment
+# Continuous Delivery Process for Production Environment
 - stage: DeliverytoPRODUCTION
   condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/main'))
   variables: 
   - group: PROD-var
   jobs:
-  - deployment: staging
-    displayName: Deploy to Staging
+  - deployment: production
+    displayName: Deploy to PRODUCTION
     environment:
       name: PRODUCTION
       resourceType: VirtualMachine
