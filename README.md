@@ -17,14 +17,3 @@ This sample application demonstrates the following technologies.
 * [PostgreSQL](https://www.postgresql.org/) (can be installed locally using Docker)
 * [Free Okta developer account](https://developer.okta.com/) for account registration, login
 
-## Install and Configuration
-
-1. Clone or download source files
-1. Run `npm install` to install dependencies
-1. If you don't already have PostgreSQL, set up using Docker
-1. Create a [free Okta developer account](https://developer.okta.com/) and add a web application for this app
-1. Copy `.env.sample` to `.env` and change the `OKTA_*` values to your application
-1. Initialize the PostgreSQL database by running `npm run initdb`
-1. Run `npm run dev` to start Node.js
-
-The associated blog post goes into more detail on how to set up PostgreSQL with Docker and how to configure your Okta account.
